@@ -14,32 +14,45 @@ class _CreatePageState extends State<CreatePage> {
   Map<String, TextEditingController> textEditingControllers = {};
 
   @override
+  void dispose() {
+    textEditingControllers.forEach((key, value) => value.dispose());
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[350],
-      bottomNavigationBar: BottomAppBar(
-        color: Colors.blueGrey,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            IconButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              icon: const Icon(Icons.arrow_back),
-              color: Colors.white,
-            ),
-            IconButton(
-              onPressed: () {
-                print(service.test());
-              },
-              icon: const Icon(Icons.play_arrow_sharp),
-              color: Colors.white,
-            ),
-          ],
+    return MyInheritedWidget(
+      map: textEditingControllers,
+      child: Scaffold(
+        backgroundColor: Colors.grey[350],
+        bottomNavigationBar: BottomAppBar(
+          color: Colors.blueGrey,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              IconButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                icon: const Icon(Icons.arrow_back),
+                color: Colors.white,
+              ),
+              IconButton(
+                onPressed: () {
+                  var s =
+                      service.makeAssociationFromForm(textEditingControllers);
+                  print(s);
+                },
+                icon: const Icon(Icons.play_arrow_sharp),
+                color: Colors.white,
+              ),
+            ],
+          ),
+        ),
+        body: const SafeArea(
+          child: CreateNewAssociationForm(),
         ),
       ),
-      body: const SafeArea(child: CreateNewAssociationForm()),
     );
   }
 }
@@ -55,24 +68,24 @@ class CreateNewAssociationForm extends StatefulWidget {
 class _CreateNewAssociationFormState extends State<CreateNewAssociationForm> {
   @override
   Widget build(BuildContext context) {
+    Map textEditingControllers = MyInheritedWidget.of(context).map;
     return Center(
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         scrollDirection: Axis.vertical,
         child: Column(
-          children: createColumnsForInput(),
+          children: createColumnsForInput(textEditingControllers),
         ),
       ),
     );
   }
 }
 
-List<Widget> createColumnsForInput() {
+List<Widget> createColumnsForInput(textEditingControllers) {
   List<Widget> columns = [];
-  Map<String, TextEditingController> textEditingControllers = {};
 
   Widget returnField(String hintText, int? i, bool isAns) {
-    var textEditingController = TextEditingController();
+    var textEditingController = new TextEditingController();
     textEditingControllers.putIfAbsent(
       (isAns) ? hintText : "$hintText$i",
       () => textEditingController,
@@ -139,98 +152,6 @@ List<Widget> createColumnsForInput() {
 
   for (var tag in Tags.values) {
     var tagName = tag.name;
-    // columns.add(
-    //   Stack(
-    //     children: <Widget>[
-    //       Container(
-    //         margin: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-    //         padding: const EdgeInsets.only(bottom: 10),
-    //         decoration: BoxDecoration(
-    //           border: Border.all(
-    //             color: Colors.blueGrey,
-    //             width: 2,
-    //           ),
-    //           borderRadius: BorderRadius.circular(10),
-    //           shape: BoxShape.rectangle,
-    //         ),
-    //         child: Column(
-    //           children: [
-    //             Padding(
-    //               padding:
-    //                   const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-    //               child: TextField(
-    //                 textAlign: TextAlign.center,
-    //                 decoration: InputDecoration(
-    //                   border: const UnderlineInputBorder(),
-    //                   hintText: '${tagName}1',
-    //                 ),
-    //               ),
-    //             ),
-    //             Padding(
-    //               padding:
-    //                   const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-    //               child: TextField(
-    //                 textAlign: TextAlign.center,
-    //                 decoration: InputDecoration(
-    //                   border: const UnderlineInputBorder(),
-    //                   hintText: '${tagName}2',
-    //                 ),
-    //               ),
-    //             ),
-    //             Padding(
-    //               padding:
-    //                   const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-    //               child: TextField(
-    //                 textAlign: TextAlign.center,
-    //                 decoration: InputDecoration(
-    //                   border: const UnderlineInputBorder(),
-    //                   hintText: '${tagName}3',
-    //                 ),
-    //               ),
-    //             ),
-    //             Padding(
-    //               padding:
-    //                   const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-    //               child: TextField(
-    //                 textAlign: TextAlign.center,
-    //                 decoration: InputDecoration(
-    //                   border: const UnderlineInputBorder(),
-    //                   hintText: '${tagName}4',
-    //                 ),
-    //               ),
-    //             ),
-    //             Padding(
-    //               padding:
-    //                   const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-    //               child: TextField(
-    //                 textAlign: TextAlign.center,
-    //                 decoration: InputDecoration(
-    //                   border: const UnderlineInputBorder(),
-    //                   hintText: 'Final $tagName',
-    //                 ),
-    //               ),
-    //             ),
-    //           ],
-    //         ),
-    //       ),
-    //       Positioned(
-    //         left: 50,
-    //         top: 12,
-    //         child: Container(
-    //           padding: const EdgeInsets.only(bottom: 10, left: 10, right: 10),
-    //           color: Colors.grey[350],
-    //           child: Text(
-    //             'Column $tagName',
-    //             style: const TextStyle(
-    //               fontSize: 15,
-    //               fontWeight: FontWeight.bold,
-    //             ),
-    //           ),
-    //         ),
-    //       ),
-    //     ],
-    //   ),
-    // );
 
     columns.add(
       createFieldAroundColumn(
@@ -245,4 +166,21 @@ List<Widget> createColumnsForInput() {
     createFieldAroundColumn('FINAL', isAns: true),
   );
   return columns;
+}
+
+class MyInheritedWidget extends InheritedWidget {
+  const MyInheritedWidget({
+    Key? key,
+    required this.child,
+    required this.map,
+  }) : super(key: key, child: child);
+
+  @override
+  final Widget child;
+  final Map map;
+  static MyInheritedWidget of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<MyInheritedWidget>()!;
+
+  @override
+  bool updateShouldNotify(covariant MyInheritedWidget oldWidget) => true;
 }

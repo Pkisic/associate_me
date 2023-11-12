@@ -11,4 +11,9 @@ class Association {
       'finalAns': finalAns,
     };
   }
+
+  @override
+  String toString() {
+    return 'Columns: $columns, Final Ans: $finalAns';
+  }
 }
