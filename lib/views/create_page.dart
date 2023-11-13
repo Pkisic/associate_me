@@ -11,6 +11,7 @@ class CreatePage extends StatefulWidget {
 
 class _CreatePageState extends State<CreatePage> {
   final service = BaseService();
+  final _formKey = GlobalKey<FormState>();
   Map<String, TextEditingController> textEditingControllers = {};
 
   @override
@@ -23,6 +24,7 @@ class _CreatePageState extends State<CreatePage> {
   Widget build(BuildContext context) {
     return MyInheritedWidget(
       map: textEditingControllers,
+      formKey: _formKey,
       child: Scaffold(
         backgroundColor: Colors.grey[350],
         bottomNavigationBar: BottomAppBar(
@@ -39,6 +41,14 @@ class _CreatePageState extends State<CreatePage> {
               ),
               IconButton(
                 onPressed: () {
+                  if (!_formKey.currentState!.validate()) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Fill missing fields...'),
+                      ),
+                    );
+                    return;
+                  }
                   var s =
                       service.makeAssociationFromForm(textEditingControllers);
                   print(s);
@@ -73,8 +83,11 @@ class _CreateNewAssociationFormState extends State<CreateNewAssociationForm> {
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         scrollDirection: Axis.vertical,
-        child: Column(
-          children: createColumnsForInput(textEditingControllers),
+        child: Form(
+          key: MyInheritedWidget.of(context).formKey,
+          child: Column(
+            children: createColumnsForInput(textEditingControllers),
+          ),
         ),
       ),
     );
@@ -85,14 +98,20 @@ List<Widget> createColumnsForInput(textEditingControllers) {
   List<Widget> columns = [];
 
   Widget returnField(String hintText, int? i, bool isAns) {
-    var textEditingController = new TextEditingController();
-    textEditingControllers.putIfAbsent(
-      (isAns) ? hintText : "$hintText$i",
-      () => textEditingController,
-    );
+    var key = (isAns) ? hintText : "$hintText$i";
+    if (!textEditingControllers.containsKey(key)) {
+      textEditingControllers[key] = TextEditingController();
+    }
+    var textEditingController = textEditingControllers[key];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-      child: TextField(
+      child: TextFormField(
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter some text';
+          }
+          return null;
+        },
         textAlign: TextAlign.center,
         decoration: InputDecoration(
           border: const UnderlineInputBorder(),
@@ -173,11 +192,13 @@ class MyInheritedWidget extends InheritedWidget {
     Key? key,
     required this.child,
     required this.map,
+    required this.formKey,
   }) : super(key: key, child: child);
 
   @override
   final Widget child;
   final Map map;
+  final GlobalKey<FormState> formKey;
   static MyInheritedWidget of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<MyInheritedWidget>()!;
 
