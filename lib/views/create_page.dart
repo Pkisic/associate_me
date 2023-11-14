@@ -12,6 +12,8 @@ class CreatePage extends StatefulWidget {
 class _CreatePageState extends State<CreatePage> {
   final service = BaseService();
   final _formKey = GlobalKey<FormState>();
+  bool _changesView = true;
+  bool _enableButton = true;
   Map<String, TextEditingController> textEditingControllers = {};
 
   @override
@@ -41,6 +43,19 @@ class _CreatePageState extends State<CreatePage> {
               ),
               IconButton(
                 onPressed: () {
+                  setState(() {
+                    _changesView = !_changesView;
+                    _enableButton = !_enableButton;
+                  });
+                },
+                icon: const Icon(Icons.app_registration),
+                color: Colors.white,
+              ),
+              IconButton(
+                onPressed: () {
+                  if (!_enableButton) {
+                    return;
+                  }
                   if (!_formKey.currentState!.validate()) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -59,8 +74,10 @@ class _CreatePageState extends State<CreatePage> {
             ],
           ),
         ),
-        body: const SafeArea(
-          child: CreateNewAssociationForm(),
+        body: SafeArea(
+          child: CreateNewAssociationForm(
+            switchesView: _changesView,
+          ),
         ),
       ),
     );
@@ -68,7 +85,8 @@ class _CreatePageState extends State<CreatePage> {
 }
 
 class CreateNewAssociationForm extends StatefulWidget {
-  const CreateNewAssociationForm({super.key});
+  final bool switchesView;
+  const CreateNewAssociationForm({super.key, required this.switchesView});
 
   @override
   State<CreateNewAssociationForm> createState() =>
@@ -76,21 +94,117 @@ class CreateNewAssociationForm extends StatefulWidget {
 }
 
 class _CreateNewAssociationFormState extends State<CreateNewAssociationForm> {
+  final PageController _pageController = PageController();
+  final List<bool> _pageValidation = List.filled(5, false);
+  final Map<int, GlobalKey<FormState>> formKeys = {};
+  bool isLastPage = false;
+
   @override
   Widget build(BuildContext context) {
     Map textEditingControllers = MyInheritedWidget.of(context).map;
+    var lastPage = createColumnsForInput(textEditingControllers).length;
     return Center(
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        scrollDirection: Axis.vertical,
-        child: Form(
-          key: MyInheritedWidget.of(context).formKey,
-          child: Column(
-            children: createColumnsForInput(textEditingControllers),
-          ),
-        ),
-      ),
+      child: (widget.switchesView)
+          ? SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              scrollDirection: Axis.vertical,
+              child: Form(
+                key: MyInheritedWidget.of(context).formKey,
+                child: Column(
+                  children: createColumnsForInput(textEditingControllers),
+                ),
+              ),
+            )
+          : PageView.builder(
+              controller: _pageController,
+              onPageChanged: (value) {
+                var page = value - 1;
+                if (formKeys[page] != null && _pageValidation[page] == false) {
+                  if (formKeys[page]!.currentState!.validate()) {
+                    setState(() {
+                      _pageValidation[page] = true;
+                    });
+                  } else {
+                    _pageController.animateToPage(
+                      page,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                    return;
+                  }
+                }
+                if ((lastPage - 1) == value) {
+                  setState(() {
+                    isLastPage = true;
+                  });
+                } else {
+                  setState(() {
+                    isLastPage = false;
+                  });
+                }
+              },
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: createColumnsForInput(textEditingControllers).length,
+              itemBuilder: (context, index) {
+                formKeys[index] = GlobalKey<FormState>();
+                return Column(
+                  children: [
+                    Form(
+                      key: formKeys[index],
+                      child:
+                          createColumnsForInput(textEditingControllers)[index],
+                    ),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: returnTheAnswers(textEditingControllers),
+                    )
+                  ],
+                );
+                // return createColumnsForInput(textEditingControllers)[index];
+              },
+            ),
     );
+  }
+
+  List<Widget> returnTheAnswers(textEditingControllers) {
+    List<Widget> columns = [];
+    for (var entry in textEditingControllers.entries) {
+      for (var tag in Tags.values) {
+        if (entry.key == tag.name) {
+          columns.add(
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: MediaQuery.of(context).size.width / 2,
+                  child: Text(
+                    entry.key + " : ",
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width / 2,
+                  child: Text(
+                    entry.value.text,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.left,
+                  ),
+                )
+              ],
+            ),
+          );
+        }
+      }
+    }
+    return columns;
   }
 }
 
